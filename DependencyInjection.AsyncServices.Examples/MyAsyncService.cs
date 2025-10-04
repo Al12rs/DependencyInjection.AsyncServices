@@ -18,11 +18,11 @@ public class MyAsyncBuildable : IMyAsyncService, IAsyncInitializable<MyAsyncBuil
     public static async Task<MyAsyncBuildable> ConstructAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<MyAsyncBuildable>>();
-        var myAsyncDependency = await serviceProvider.GetRequiredAsyncService<IMyAsyncDependency>(cancellationToken: cancellationToken);
+        var myAsyncDependency = await serviceProvider.GetRequiredAsyncService<IMyAsyncDependency>();
         return new MyAsyncBuildable(logger, myAsyncDependency);
     }
     
-    private MyAsyncBuildable(ILogger<MyAsyncBuildable> logger, IMyAsyncDependency myAsyncDependency)
+    public MyAsyncBuildable(ILogger<MyAsyncBuildable> logger, IMyAsyncDependency myAsyncDependency)
     {
         _myAsyncDependency = myAsyncDependency;
         _logger = logger;
@@ -51,7 +51,7 @@ public class MyAsyncDependency : IMyAsyncDependency, IAsyncInitializable<MyAsync
 {
     private readonly ILogger<MyAsyncDependency> _logger;
 
-    private MyAsyncDependency(ILogger<MyAsyncDependency> logger)
+    public MyAsyncDependency(ILogger<MyAsyncDependency> logger)
     {
         _logger = logger;
     }
