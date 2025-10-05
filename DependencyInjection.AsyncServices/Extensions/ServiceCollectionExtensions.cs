@@ -32,10 +32,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSingletonAsync<TService>(this IServiceCollection services) 
         where TService : class, IAsyncServiceBase<TService>
     {
-        return services.AddSingleton<AsyncServiceBox<TService>>(sp =>
+        return services.AddSingleton<IAsyncServiceBox<TService>>(sp =>
         {
             var serviceTask = IAsyncServiceBase<TService>.CreateServiceAsync(sp);
-            return new AsyncServiceBox<TService>(serviceTask);
+            return new AsyncServiceBox<TService>(serviceTask, sp);
         });
     }
     
@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
     /// as <see cref="Task{TService}"/>.
     /// </summary>
     /// <typeparam name="TService">The service interface or base class to register</typeparam>
-    /// <typeparam name="TImplementation">The concrete implementation that implements <see cref="IAsyncServiceBase{T}"/></typeparam>
+    /// <typeparam name="TImpl">The concrete implementation that implements <see cref="IAsyncServiceBase{T}"/></typeparam>
     /// <param name="services">The service collection to add the service to</param>
     /// <returns>The service collection for method chaining</returns>
     /// <remarks>
@@ -63,16 +63,16 @@ public static class ServiceCollectionExtensions
     /// var myService = await serviceProvider.GetRequiredAsyncService&lt;IMyService&gt;();
     /// </code>
     /// </example>
-    public static IServiceCollection AddSingletonAsync<TService, TImplementation>(this IServiceCollection services) 
-        where TImplementation : class, TService, IAsyncServiceBase<TImplementation>
+    public static IServiceCollection AddSingletonAsync<TService, TImpl>(this IServiceCollection services) 
+        where TImpl : class, TService, IAsyncServiceBase<TImpl>
         where TService : class
     {
-        return services.AddSingleton<AsyncServiceBox<TService>>(sp =>
+        return services.AddSingleton<IAsyncServiceBox<TService>>(sp =>
         {
-            var serviceImplTask = IAsyncServiceBase<TImplementation>.CreateServiceAsync(sp);
-            // Cast Task<TImplementation> to Task<TService>
-            var serviceTask = CastTaskToBaseType<TService, TImplementation>(serviceImplTask);
-            return new AsyncServiceBox<TService>(serviceTask);
+            var serviceImplTask = IAsyncServiceBase<TImpl>.CreateServiceAsync(sp);
+            var implBox = new AsyncServiceBox<TImpl>(serviceImplTask, sp);
+
+            return new AsyncServiceBoxProxy<TService, TImpl>(implBox, sp);
         });
     }
     

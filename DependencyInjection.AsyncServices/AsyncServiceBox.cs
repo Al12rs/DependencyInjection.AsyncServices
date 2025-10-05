@@ -1,5 +1,18 @@
 ﻿namespace DependencyInjection.AsyncServices;
 
+
+// internal interface IAsyncServiceBox : IAsyncDisposable
+// {
+//     
+// }
+
+
+internal interface IAsyncServiceBox<TService> : IAsyncDisposable
+    where TService : class
+{
+    Task<TService> GetServiceAsync();
+} 
+
 /// <summary>
 /// Wrapper for async services that provides lifecycle management and disposal support.
 /// This class encapsulates the <see cref="Task{TService}"/> returned by 
@@ -12,18 +25,21 @@
 /// Consumers should use <see cref="Extensions.ServiceProviderExtensions.GetRequiredAsyncService{TService}"/>
 /// to resolve async services rather than interacting with this class directly.
 /// </remarks>
-internal sealed class AsyncServiceBox<TService> : IAsyncDisposable 
+internal class AsyncServiceBox<TService> : IAsyncServiceBox<TService>, IAsyncDisposable 
     where TService : class
 {
     private readonly Task<TService> _serviceTask;
-    
+    private readonly IServiceProvider _serviceProvider;
+
     /// <summary>
     /// Initializes a new instance of <see cref="AsyncServiceBox{TService}"/> with the service creation task.
     /// </summary>
     /// <param name="serviceTask">The task that creates and initializes the service</param>
-    public AsyncServiceBox(Task<TService> serviceTask)
+    /// <param name="serviceProvider"></param>
+    public AsyncServiceBox(Task<TService> serviceTask, IServiceProvider serviceProvider)
     {
         _serviceTask = serviceTask;
+        _serviceProvider = serviceProvider;
     }
     
     /// <summary>
@@ -45,6 +61,12 @@ internal sealed class AsyncServiceBox<TService> : IAsyncDisposable
         // Only dispose if the service was successfully created
         if (_serviceTask.IsCompletedSuccessfully)
         {
+            // Dispose dependers first
+            // foreach (var depender in _dependers)
+            // {
+            //     await depender.DisposeAsync();
+            // }
+            
             var service = await _serviceTask;
             
             // Prefer async disposal over synchronous
@@ -58,5 +80,30 @@ internal sealed class AsyncServiceBox<TService> : IAsyncDisposable
                     break;
             }
         }
+    }
+    
+}
+
+internal sealed class AsyncServiceBoxProxy<TService, TImpl> : IAsyncServiceBox<TService>
+    where TService : class
+    where TImpl : class, TService
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IAsyncServiceBox<TImpl> _implServiceBox;
+
+    public AsyncServiceBoxProxy(IAsyncServiceBox<TImpl> implServiceBox, IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        _implServiceBox = implServiceBox;
+    }
+
+    public async Task<TService> GetServiceAsync()
+    {
+        return await _implServiceBox.GetServiceAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _implServiceBox.DisposeAsync();
     }
 }

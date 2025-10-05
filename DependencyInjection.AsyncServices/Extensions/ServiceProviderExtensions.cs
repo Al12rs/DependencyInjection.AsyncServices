@@ -25,7 +25,7 @@ public static class ServiceProviderExtensions
         this IServiceProvider serviceProvider) 
         where TService : class
     {
-        var asyncServiceBox = serviceProvider.GetRequiredService<AsyncServiceBox<TService>>();
+        var asyncServiceBox = serviceProvider.GetRequiredService<IAsyncServiceBox<TService>>();
         return asyncServiceBox.GetServiceAsync();
     }
 }
